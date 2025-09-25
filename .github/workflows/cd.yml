@@ -259,6 +259,51 @@ jobs:
           rm -f /tmp/app.zip
           echo "Deployment completed successfully"
           EOF
+      - name: Upload deploy.sh to Blob + generate SAS
+        if: ${{ success() }}
+        uses: azure/cli@v2.1.0
+        env:
+          AZ_STORAGE_ACCOUNT: ${{ secrets.AZ_STORAGE_ACCOUNT }}
+          AZ_STORAGE_CONTAINER: ${{ secrets.AZ_STORAGE_CONTAINER }}
+          AZ_STORAGE_KEY: ${{ secrets.AZ_STORAGE_KEY }}
+        with:
+          inlineScript: |
+            set -euo pipefail
+            az storage blob upload \
+              --account-name "$AZ_STORAGE_ACCOUNT" \
+              --account-key "$AZ_STORAGE_KEY" \
+              --container-name "$AZ_STORAGE_CONTAINER" \
+              --file deploy.sh \
+              --name deploy.sh \
+              --overwrite
+            SCRIPT_SAS_URL=$(az storage blob generate-sas \
+              --account-name "$AZ_STORAGE_ACCOUNT" \
+              --account-key "$AZ_STORAGE_KEY" \
+              --container-name "$AZ_STORAGE_CONTAINER" \
+              --name deploy.sh \
+              --permissions r \
+              --expiry "$(date -u -d '+1 hour' '+%Y-%m-%dT%H:%MZ')" \
+              --https-only --full-uri -o tsv)
+            echo "::add-mask::$SCRIPT_SAS_URL"
+            echo "SCRIPT_SAS_URL=$SCRIPT_SAS_URL" >> "$GITHUB_ENV"
+
+      # NEW: run a tiny command on the VM to download & execute the script
+      - name: Execute deploy.sh on VM
+        if: ${{ success() }}
+        uses: azure/cli@v2.1.0
+        env:
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ secrets.AZURE_VM_NAME }}
+          PACKAGE_SAS_URL: ${{ env.PACKAGE_SAS_URL }}
+          SCRIPT_SAS_URL: ${{ env.SCRIPT_SAS_URL }}
+        with:
+          inlineScript: |
+            set -euo pipefail
+            az vm run-command invoke \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --name "$AZURE_VM_NAME" \
+              --command-id RunShellScript \
+              --scripts "curl -fsSL '$SCRIPT_SAS_URL' -o /tmp/deploy.sh && chmod +x /tmp/deploy.sh && sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'"
 
       - name: Upload and execute deployment script
         if: ${{ success() }}
