@@ -97,13 +97,10 @@ jobs:
           (cd "$GITHUB_WORKSPACE" && zip -r "$ZIP_NAME" "deployment-package")
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
 
-      - name: Azure login (client secret)
+      - name: Azure login (Service Principal)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Upload deployment package artifact
         uses: actions/upload-artifact@v4.6.2
@@ -179,7 +176,7 @@ jobs:
           # Configuration
           APP_DIR="/opt/myapp"
           APP_NAME="myapp"
-          APP_USER="azureuser"
+          APP_USER="azure"
           PACKAGE_URL="$1"
           
           # Install Node.js if not present
@@ -250,7 +247,7 @@ jobs:
           
           # Start with PM2 (non-blocking)
           echo "Starting application with PM2..."
-          sudo -u "$APP_USER" pm2 start "$APP_DIR/current/server.js" --name "$APP_NAME" --no-daemon
+          sudo -u "$APP_USER" pm2 start "$APP_DIR/current/server.js" --name "$APP_NAME"
           
           echo "PM2 status:"
           sudo -u "$APP_USER" pm2 ls
