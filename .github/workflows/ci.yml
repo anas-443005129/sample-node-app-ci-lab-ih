@@ -42,11 +42,9 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          # dockerfilePath: ./Dockerfile        # uncomment if your Dockerfile isn't at the root
-          # target: <your-target-stage>         # uncomment if using a multi-stage target
           registryUrl: docker.io
-          registryUsername: ${{ secrets.DOCKERHUB_USERNAME }}
+          registryUsername: ${{ secrets.DOCKERHUB_USERNAME }}   # anasabdullahalzahrani
           registryPassword: ${{ secrets.DOCKERHUB_TOKEN }}
           containerAppName: frontendapp
-          resourceGroup: container-labs-rg
-          imageToBuild: saurabhd2106/frontendapp-node:${{ github.sha }}
+          resourceGroup: Anas-LABSs
+          imageToBuild: anasabdullahalzahrani/ecom-frontend:${{ github.sha }}
